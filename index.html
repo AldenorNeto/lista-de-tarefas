@@ -79,7 +79,9 @@
   .freq { color:var(--muted); font-size:.85rem; }
   .pill { display:inline-block; padding:2px 10px; border-radius:999px; margin:2px 4px 2px 0; font-size:.85rem; font-weight:600; }
 
-  #msg { min-height:1.5em; margin-top:12px; font-size:.9rem; }
+  #msg { position:fixed; left:16px; right:16px; bottom:calc(76px + env(safe-area-inset-bottom)); z-index:6; padding:10px 14px; background:var(--card); border:1px solid var(--line); border-radius:10px; font-size:.9rem; box-shadow:0 6px 24px rgba(0,0,0,.25); }
+  #msg:empty { display:none; }
+  #versao { margin-top:24px; }
   #msg.err { color:var(--err); }
   #msg.ok { color:var(--ok); }
   [hidden] { display:none !important; }
@@ -161,6 +163,7 @@
         <h2 style="margin-top:28px">Arquivadas</h2>
         <div class="card"><ul id="lista-arquivadas"></ul></div>
       </div>
+      <p class="freq" id="versao"></p>
     </div>
   </section>
 
@@ -174,7 +177,9 @@ const SUPABASE_URL = "https://pnojsmnslhzmiizghfdh.supabase.co";
 const SUPABASE_KEY = "sb_publishable_mV-yEkVoNrkL-F3nRQ5u-g_Pd-VzNNP";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const VERSAO = "2026-11-01.2";
 const $ = (id) => document.getElementById(id);
+$("versao").textContent = "Versão " + VERSAO;
 const msg = (text, kind = "") => { $("msg").textContent = text; $("msg").className = kind; };
 
 // Dia local (não UTC), no formato YYYY-MM-DD que a coluna `date` espera.
@@ -562,7 +567,17 @@ function mostrar(session) {
 sb.auth.onAuthStateChange((_evento, session) => mostrar(session));
 sb.auth.getSession().then(({ data }) => mostrar(data.session));
 
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator) {
+  // Se já havia um service worker e chegou uma versão nova, recarrega uma vez para usá-la.
+  const tinhaControle = !!navigator.serviceWorker.controller;
+  let recarregou = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!tinhaControle || recarregou) return;
+    recarregou = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>

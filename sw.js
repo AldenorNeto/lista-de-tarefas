@@ -1,6 +1,6 @@
 // Service worker: guarda a "casca" do app para abrir rápido e instalar no celular.
 // Os dados (Supabase) nunca são guardados aqui: vão sempre direto para a rede.
-const CACHE = "tarefas-v1";
+const CACHE = "tarefas-v2";
 const CASCA = ["./", "index.html", "manifest.json", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -37,8 +37,10 @@ self.addEventListener("fetch", (e) => {
 
   // Arquivos do app: rede primeiro (pega atualizações), cache como reserva offline.
   // Não guarda URLs com query (ex.: ?code= do login com GitHub).
+  // cache: "no-cache" faz o navegador revalidar com o servidor, em vez de reaproveitar
+  // por alguns minutos a cópia que o GitHub Pages permite guardar (senão o app "não atualiza").
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then((res) => (url.search ? res : guardar(req, res)))
       .catch(() => caches.match(req).then((hit) => hit || caches.match("index.html")))
   );
