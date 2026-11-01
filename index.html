@@ -93,6 +93,8 @@
     <h1>Minhas Tarefas</h1>
   </header>
 
+  <p id="carregando" class="empty" style="margin-top:24px">Carregando…</p>
+
   <section id="auth" class="card" style="margin-top:24px" hidden>
     <form id="authForm">
       <p style="margin-top:0">Entre ou crie uma conta para guardar suas tarefas.</p>
@@ -171,13 +173,26 @@
 </main>
 <div id="tip" hidden></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+// Qualquer falha de script aparece na tela (em vez de uma página vazia).
+function mostrarFalha(texto) {
+  const d = document.getElementById("msg");
+  if (d) { d.textContent = "Erro: " + texto; d.className = "err"; }
+}
+window.addEventListener("error", (e) => mostrarFalha(e.message));
+window.addEventListener("unhandledrejection", (e) => mostrarFalha((e.reason && e.reason.message) || String(e.reason)));
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" onerror="mostrarFalha('não consegui carregar a biblioteca do Supabase (verifique a internet)')"></script>
 <script>
 const SUPABASE_URL = "https://pnojsmnslhzmiizghfdh.supabase.co";
 const SUPABASE_KEY = "sb_publishable_mV-yEkVoNrkL-F3nRQ5u-g_Pd-VzNNP";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// lock sem espera: o padrão usa um "lock" entre abas que, se ficar preso, deixa o app
+// parado esperando a sessão (tela vazia). Para um app de uso pessoal não precisamos dele.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { lock: (_nome, _espera, fn) => fn() },
+});
 
-const VERSAO = "2026-11-01.2";
+const VERSAO = "2026-11-01.3";
 const $ = (id) => document.getElementById(id);
 $("versao").textContent = "Versão " + VERSAO;
 const msg = (text, kind = "") => { $("msg").textContent = text; $("msg").className = kind; };
@@ -554,6 +569,7 @@ $("github").addEventListener("click", async () => {
 });
 
 function mostrar(session) {
+  $("carregando").hidden = true;
   $("auth").hidden = !!session;
   $("app").hidden = !session;
   if (session) {
@@ -564,8 +580,18 @@ function mostrar(session) {
   }
 }
 
-sb.auth.onAuthStateChange((_evento, session) => mostrar(session));
-sb.auth.getSession().then(({ data }) => mostrar(data.session));
+let iniciou = false;
+const iniciar = (session) => { iniciou = true; mostrar(session); };
+sb.auth.onAuthStateChange((_evento, session) => iniciar(session));
+sb.auth.getSession()
+  .then(({ data }) => iniciar(data.session))
+  .catch((e) => { msg("Erro ao restaurar a sessão: " + e.message, "err"); iniciar(null); });
+// Se a sessão demorar demais, mostra o login em vez de ficar em branco.
+setTimeout(() => {
+  if (iniciou) return;
+  msg("Demorou para restaurar sua sessão. Entre de novo.", "err");
+  iniciar(null);
+}, 6000);
 
 if ("serviceWorker" in navigator) {
   // Se já havia um service worker e chegou uma versão nova, recarrega uma vez para usá-la.
