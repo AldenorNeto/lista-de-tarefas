@@ -1,0 +1,5 @@
+.env
+.env.*
+supabase/.env
+supabase/.temp/
+.claude/
