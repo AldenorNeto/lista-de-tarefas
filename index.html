@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Minhas Tarefas</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2563eb">
@@ -17,7 +17,7 @@
   }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif; }
-  main { max-width:900px; margin:0 auto; padding:24px 16px 64px; }
+  main { max-width:900px; margin:0 auto; padding:24px 16px calc(96px + env(safe-area-inset-bottom)); }
   header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
   h1 { font-size:1.5rem; margin:0; }
   h2 { font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:0 0 8px; }
@@ -29,9 +29,11 @@
   button { padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
   button.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); }
   button.icon { background:transparent; color:var(--muted); padding:4px 8px; }
-  nav { display:flex; gap:6px; margin:20px 0; border-bottom:1px solid var(--line); }
-  nav button { background:transparent; color:var(--muted); border-radius:8px 8px 0 0; border-bottom:2px solid transparent; }
-  nav button.on { color:var(--text); border-bottom-color:var(--accent); font-weight:600; }
+  #app { margin-top:20px; }
+  nav { position:fixed; left:0; right:0; bottom:0; z-index:5; display:flex; background:var(--card); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+  nav button { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 8px 8px; background:transparent; color:var(--muted); border-radius:0; border-top:2px solid transparent; font-size:.8rem; }
+  nav button .ic { font-size:1.35rem; line-height:1.2; }
+  nav button.on { color:var(--text); border-top-color:var(--accent); font-weight:600; }
   ul { list-style:none; margin:0; padding:0; }
   li { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
   li:last-child { border-bottom:0; }
@@ -50,9 +52,9 @@
   .cal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   .cal-head .mes { font-weight:600; font-size:1.1rem; }
   .cal-head .mes::first-letter { text-transform:uppercase; }
-  .semana, .grade { display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; }
+  .semana, .grade { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:4px; }
   .semana span { text-align:center; color:var(--muted); font-size:.8rem; padding-bottom:4px; }
-  .cel { min-height:64px; padding:6px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); font:inherit; display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; cursor:default; }
+  .cel { min-width:0; min-height:64px; padding:6px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); font:inherit; display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; cursor:default; }
   .cel.tem { cursor:pointer; }
   .cel.hoje { outline:2px solid var(--accent); outline-offset:-1px; }
   .cel.futuro { opacity:.45; }
@@ -79,10 +81,6 @@
 <main>
   <header>
     <h1>Minhas Tarefas</h1>
-    <div id="user" hidden>
-      <small id="userEmail"></small>
-      <button class="ghost" id="logout">Sair</button>
-    </div>
   </header>
 
   <section id="auth" class="card" style="margin-top:24px" hidden>
@@ -102,9 +100,9 @@
 
   <section id="app" hidden>
     <nav id="abas">
-      <button data-aba="hoje">Hoje</button>
-      <button data-aba="calendario">Calendário</button>
-      <button data-aba="tarefas">Tarefas</button>
+      <button data-aba="hoje"><span class="ic">✅</span>Hoje</button>
+      <button data-aba="calendario"><span class="ic">📅</span>Calendário</button>
+      <button data-aba="tarefas"><span class="ic">📝</span>Tarefas</button>
     </nav>
 
     <!-- HOJE: metade esquerda = a fazer, metade direita = feitas hoje -->
@@ -482,7 +480,7 @@ async function apagar(t) {
 }
 
 $("abas").addEventListener("click", (e) => {
-  const a = e.target.dataset.aba;
+  const a = e.target.closest("button")?.dataset.aba;
   if (a) { state.aba = a; esconderTip(); desenhar(); }
 });
 
@@ -540,14 +538,10 @@ $("github").addEventListener("click", async () => {
   if (error) msg("Não foi possível entrar com o GitHub: " + error.message, "err");
 });
 
-$("logout").addEventListener("click", () => sb.auth.signOut());
-
 function mostrar(session) {
   $("auth").hidden = !!session;
   $("app").hidden = !session;
-  $("user").hidden = !session;
   if (session) {
-    $("userEmail").textContent = session.user.email;
     carregar();
   } else {
     state.tarefas = [];
