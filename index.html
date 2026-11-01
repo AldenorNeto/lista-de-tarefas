@@ -70,7 +70,11 @@
   #tip .tit::first-letter { text-transform:uppercase; }
   #tip.aviso { border-color:var(--warn); }
   #tip.aviso .tit { color:var(--warn); font-weight:600; }
-  button.aviso-btn { display:flex; background:transparent; color:var(--warn); padding:4px 6px; }
+  li.item-dia { padding:0; border:0; gap:0; border-radius:10px; margin-bottom:8px; }
+  li.item-dia:last-child { margin-bottom:0; }
+  li.item-dia:active { filter:brightness(.92); }
+  .item-dia .principal { flex:1; min-width:0; text-align:left; background:transparent; color:inherit; padding:14px; border-radius:10px; font:inherit; font-weight:600; word-break:break-word; }
+  button.aviso-btn { display:flex; background:transparent; color:inherit; padding:12px 14px; }
   button.aviso-btn svg { width:20px; height:20px; }
   .freq { color:var(--muted); font-size:.85rem; }
   .pill { display:inline-block; padding:2px 10px; border-radius:999px; margin:2px 4px 2px 0; font-size:.85rem; font-weight:600; }
@@ -179,11 +183,14 @@ const pad = (n) => String(n).padStart(2, "0");
 const chaveDe = (ano, mes, dia) => ano + "-" + pad(mes + 1) + "-" + pad(dia);
 const rotuloDia = (chave) => new Date(chave + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 
-// Texto preto ou branco, conforme o brilho da cor da tarefa.
+// Texto preto ou branco: o que tiver maior razão de contraste (WCAG) com a cor da tarefa.
 function corTexto(hex) {
   const n = parseInt(hex.slice(1), 16);
-  const brilho = (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000;
-  return brilho > 150 ? "#111" : "#fff";
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  const comPreto = (L + 0.05) / (0.0056 + 0.05); // #111
+  const comBranco = 1.05 / (L + 0.05);
+  return comPreto >= comBranco ? "#111" : "#fff";
 }
 
 const plural = (n, s) => n + " " + s + (n === 1 ? "" : "s");
@@ -232,20 +239,19 @@ function botao(texto, titulo, fn, cls = "icon") {
 }
 
 function itemDia(t, feito) {
+  // O item inteiro é o botão: tocar move a tarefa entre "A fazer" e "Feitas hoje".
+  // Fundo na cor da tarefa; texto preto ou branco, o que contrastar mais.
   const li = document.createElement("li");
-  const lab = document.createElement("label");
-  lab.className = "item";
-  lab.style.cssText = "display:flex; align-items:center; gap:10px; flex:1";
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.checked = feito;
-  cb.style.accentColor = t.cor;
-  cb.addEventListener("change", () => marcar(t, cb.checked));
-  const nome = document.createElement("span");
-  nome.className = "nome";
-  nome.textContent = t.nome;
-  lab.append(bolinha(t.cor), cb, nome);
-  li.append(lab);
+  li.className = "item-dia";
+  li.style.background = t.cor;
+  li.style.color = corTexto(t.cor);
+  const principal = document.createElement("button");
+  principal.type = "button";
+  principal.className = "principal";
+  principal.textContent = t.nome;
+  principal.setAttribute("aria-label", (feito ? "Desfazer: " : "Marcar como feita: ") + t.nome);
+  principal.addEventListener("click", () => marcar(t, !feito));
+  li.append(principal);
   const s = feito ? null : situacao(t);
   if (s) {
     const b = document.createElement("button");
