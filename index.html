@@ -11,9 +11,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Tarefas">
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --text:#1c1f24; --muted:#6b7280; --line:#e5e7eb; --accent:#2563eb; --ok:#16a34a; --err:#dc2626; --warn:#d97706; }
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c1f24; --muted:#6b7280; --line:#e5e7eb; --accent:#2563eb; --ok:#16a34a; --err:#dc2626; --warn:#d97706; --on-accent:#fff; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#0f1115; --card:#181b21; --text:#e8eaed; --muted:#9aa0a6; --line:#2a2e36; --accent:#60a5fa; --ok:#4ade80; --err:#f87171; --warn:#fbbf24; }
+    :root { --bg:#0f1115; --card:#181b21; --text:#e8eaed; --muted:#9aa0a6; --line:#2a2e36; --accent:#60a5fa; --ok:#4ade80; --err:#f87171; --warn:#fbbf24; --on-accent:#0b1220; }
   }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif; }
@@ -26,7 +26,7 @@
   input[type=text], input[type=email], input[type=password], input[type=number], select { padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text); font:inherit; }
   input.grow { flex:1; min-width:0; }
   input[type=color] { flex:none; width:44px; height:42px; padding:2px; border:1px solid var(--line); border-radius:8px; background:var(--bg); cursor:pointer; }
-  button { padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  button { padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:var(--on-accent); font:inherit; cursor:pointer; }
   button.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); }
   button.icon { background:transparent; color:var(--muted); padding:4px 8px; }
   #app { margin-top:20px; }
@@ -65,6 +65,39 @@
   .cel .pontos { display:flex; flex-wrap:wrap; gap:3px; }
   .cel .pontos .dot { width:10px; height:10px; }
   .branco { min-height:64px; }
+  /* aba Tarefas */
+  .coluna { max-width:560px; margin:0 auto; }
+  .topo-tab { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+  .topo-tab h2 { margin:0; }
+  .tarefa-linha .principal { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .tarefa-linha .freq-t { font-weight:400; opacity:.85; font-size:.85rem; white-space:nowrap; }
+  .tarefa-linha.arquivada { filter:grayscale(.75); }
+  /* editor (janela para criar e editar) */
+  dialog { border:1px solid var(--line); border-radius:16px; background:var(--card); color:var(--text); padding:0; width:min(440px, calc(100vw - 32px)); max-height:90vh; overflow:auto; }
+  dialog::backdrop { background:rgba(0,0,0,.6); }
+  .folha { padding:20px; display:grid; gap:18px; }
+  .folha h3 { margin:0; font-size:1.15rem; }
+  .campo { display:grid; gap:8px; font-size:.85rem; color:var(--muted); }
+  .campo input[type=text], .campo input[type=number] { color:var(--text); font-size:1rem; width:100%; }
+  .cores { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .sw { width:34px; height:34px; padding:0; border-radius:50%; border:0; }
+  .sw.sel, #edCorCustom.sel { outline:3px solid var(--text); outline-offset:2px; }
+  #edCorCustom { width:34px; height:34px; padding:0; border:0; border-radius:50%; cursor:pointer; overflow:hidden; background:conic-gradient(#ef4444, #eab308, #22c55e, #0ea5e9, #a855f7, #ec4899, #ef4444); }
+  #edCorCustom::-webkit-color-swatch-wrapper { padding:0; }
+  #edCorCustom::-webkit-color-swatch { border:0; border-radius:50%; opacity:0; }
+  #edCorCustom::-moz-color-swatch { border:0; border-radius:50%; opacity:0; }
+  .chips-op { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip-op { padding:8px 12px; background:transparent; color:var(--text); border:1px solid var(--line); border-radius:999px; font-size:.9rem; }
+  .chip-op.sel { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
+  .acoes { display:flex; gap:8px; }
+  .acoes button { flex:1; }
+  .acoes-extra { display:flex; gap:8px; justify-content:space-between; border-top:1px solid var(--line); padding-top:14px; }
+  button.perigo { background:transparent; color:var(--err); border:1px solid var(--line); }
+  #edErro { color:var(--err); margin:0; font-size:.9rem; }
+  @media (max-width:560px) {
+    dialog { margin:auto 0 0; width:100%; max-width:none; border-radius:16px 16px 0 0; }
+    .folha { padding-bottom:calc(20px + env(safe-area-inset-bottom)); }
+  }
   #tip { position:fixed; z-index:10; max-width:260px; padding:10px 12px; background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.25); pointer-events:none; }
   #tip .tit { font-size:.85rem; color:var(--muted); margin-bottom:4px; }
   #tip .tit::first-letter { text-transform:uppercase; }
@@ -141,29 +174,15 @@
     </div>
 
     <!-- TAREFAS: criar e gerenciar -->
-    <div id="aba-tarefas" hidden style="max-width:640px">
-      <h2>Nova tarefa</h2>
-      <form id="addForm" class="row" style="flex-wrap:wrap">
-        <input id="novoNome" class="grow" type="text" placeholder="Nome da tarefa" maxlength="60" autocomplete="off" required>
-        <input id="novaCor" type="color" value="#2563eb" title="Cor">
-        <select id="novaFreq" title="Frequência">
-          <option value="">Sem frequência</option>
-          <option value="1">Todo dia</option>
-          <option value="2">A cada 2 dias</option>
-          <option value="3">A cada 3 dias</option>
-          <option value="7">Toda semana</option>
-          <option value="14">A cada 2 semanas</option>
-          <option value="30">A cada 30 dias</option>
-          <option value="custom">Outro (em dias)…</option>
-        </select>
-        <input id="novaFreqDias" type="number" min="1" max="365" placeholder="dias" style="width:90px" hidden>
-        <button type="submit">Criar</button>
-      </form>
-      <h2 style="margin-top:28px">Cadastradas</h2>
-      <div class="card"><ul id="lista-ativas"></ul></div>
+    <div id="aba-tarefas" class="coluna" hidden>
+      <div class="topo-tab">
+        <h2>Tarefas</h2>
+        <button type="button" id="btn-nova">+ Nova tarefa</button>
+      </div>
+      <ul id="lista-ativas" class="lista-tarefas"></ul>
       <div id="bloco-arquivadas" hidden>
         <h2 style="margin-top:28px">Arquivadas</h2>
-        <div class="card"><ul id="lista-arquivadas"></ul></div>
+        <ul id="lista-arquivadas" class="lista-tarefas"></ul>
       </div>
       <p class="freq" id="versao"></p>
     </div>
@@ -172,6 +191,33 @@
   <div id="msg" role="status"></div>
 </main>
 <div id="tip" hidden></div>
+
+<dialog id="editor">
+  <form id="editorForm" class="folha" autocomplete="off">
+    <h3 id="editorTitulo">Nova tarefa</h3>
+    <label class="campo">Nome
+      <input id="edNome" type="text" maxlength="60" placeholder="Ex.: treino" required>
+    </label>
+    <div class="campo">Cor
+      <div class="cores" id="edCores">
+        <input id="edCorCustom" type="color" title="Outra cor" aria-label="Escolher outra cor">
+      </div>
+    </div>
+    <div class="campo">Frequência
+      <div class="chips-op" id="edFreq"></div>
+      <input id="edFreqDias" type="number" min="1" max="365" placeholder="A cada quantos dias?" hidden>
+    </div>
+    <p id="edErro" role="alert" hidden></p>
+    <div class="acoes">
+      <button type="button" class="ghost" id="edCancelar">Cancelar</button>
+      <button type="submit" id="edSalvar">Salvar</button>
+    </div>
+    <div class="acoes-extra" id="edExtra" hidden>
+      <button type="button" class="ghost" id="edArquivar">Arquivar</button>
+      <button type="button" class="perigo" id="edApagar">Apagar</button>
+    </div>
+  </form>
+</dialog>
 
 <script>
 // Qualquer falha de script aparece na tela (em vez de uma página vazia).
@@ -192,7 +238,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { lock: (_nome, _espera, fn) => fn() },
 });
 
-const VERSAO = "2026-11-01.3";
+const VERSAO = "2026-11-01.4";
 const $ = (id) => document.getElementById(id);
 $("versao").textContent = "Versão " + VERSAO;
 const msg = (text, kind = "") => { $("msg").textContent = text; $("msg").className = kind; };
@@ -415,40 +461,27 @@ function desenharCalendario() {
 }
 
 // ---- gerenciar tarefas ----
+// Cada tarefa é um bloco na cor dela; tocar abre o editor.
 function linhaTarefa(t) {
   const li = document.createElement("li");
-  const cor = document.createElement("input");
-  cor.type = "color";
-  cor.value = t.cor;
-  cor.title = "Mudar cor";
-  cor.addEventListener("change", () => atualizar(t, { cor: cor.value }));
+  li.className = "item-dia tarefa-linha";
+  li.style.background = t.cor;
+  li.style.color = corTexto(t.cor);
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "principal";
+  b.setAttribute("aria-label", "Editar " + t.nome);
   const nome = document.createElement("span");
-  nome.className = "nome";
   nome.textContent = t.nome;
+  b.append(nome);
   if (t.frequencia_dias) {
     const f = document.createElement("small");
-    f.className = "freq";
-    f.textContent = " · " + freqLabel(t.frequencia_dias);
-    nome.append(f);
+    f.className = "freq-t";
+    f.textContent = freqLabel(t.frequencia_dias);
+    b.append(f);
   }
-  li.append(cor, nome, botao("Renomear", "Mudar o nome", () => {
-    const novo = prompt("Novo nome:", t.nome);
-    if (novo && novo.trim() && novo.trim() !== t.nome) atualizar(t, { nome: novo.trim().slice(0, 60) });
-  }), botao("Frequência", "A cada quantos dias a tarefa deve ser feita", () => {
-    const v = prompt("A cada quantos dias? (7 = semanal; deixe vazio para nenhuma)", t.frequencia_dias || "");
-    if (v === null) return;
-    const n = v.trim() === "" ? null : parseInt(v, 10);
-    if (n !== null && !(n >= 1 && n <= 365)) return msg("Use um número de 1 a 365.", "err");
-    atualizar(t, { frequencia_dias: n });
-  }));
-  if (t.arquivada) {
-    li.append(
-      botao("Restaurar", "Voltar para o dia a dia", () => atualizar(t, { arquivada: false })),
-      botao("Apagar", "Apagar a tarefa e todo o histórico dela", () => apagar(t))
-    );
-  } else {
-    li.append(botao("Arquivar", "Esconder do dia a dia, mantendo o histórico", () => atualizar(t, { arquivada: true })));
-  }
+  b.addEventListener("click", () => abrirEditor(t));
+  li.append(b);
   return li;
 }
 
@@ -456,14 +489,18 @@ function desenharTarefas() {
   const a = $("lista-ativas");
   a.replaceChildren();
   const ativasLista = ativas();
-  if (!ativasLista.length) a.append(vazio("Nada cadastrado ainda."));
+  if (!ativasLista.length) a.append(vazio("Nenhuma tarefa ainda. Toque em “Nova tarefa”."));
   ativasLista.forEach((t) => a.append(linhaTarefa(t)));
 
   const arq = state.tarefas.filter((t) => t.arquivada);
   $("bloco-arquivadas").hidden = !arq.length;
   const l = $("lista-arquivadas");
   l.replaceChildren();
-  arq.forEach((t) => l.append(linhaTarefa(t)));
+  arq.forEach((t) => {
+    const li = linhaTarefa(t);
+    li.classList.add("arquivada");
+    l.append(li);
+  });
 }
 
 function desenhar() {
@@ -523,27 +560,99 @@ function mudarMes(delta) {
 $("mes-ant").addEventListener("click", () => mudarMes(-1));
 $("mes-prox").addEventListener("click", () => mudarMes(1));
 
-$("novaFreq").addEventListener("change", () => {
-  const outro = $("novaFreq").value === "custom";
-  $("novaFreqDias").hidden = !outro;
-  if (outro) $("novaFreqDias").focus();
+// ---- editor de tarefa (criar e editar) ----
+const PALETA = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#0ea5e9", "#3b82f6", "#a855f7", "#ec4899", "#64748b"];
+const FREQS = [[null, "Sem"], [1, "Todo dia"], [2, "2 dias"], [3, "3 dias"], [7, "Semana"], [14, "2 semanas"], [30, "Mês"]];
+const ed = { tarefa: null, cor: PALETA[5], freq: null, outro: false };
+const erroEditor = (texto) => { $("edErro").textContent = texto; $("edErro").hidden = !texto; };
+
+function desenharEditor() {
+  const cores = $("edCores");
+  cores.querySelectorAll(".sw").forEach((b) => b.remove());
+  PALETA.forEach((c) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "sw" + (c === ed.cor ? " sel" : "");
+    b.style.background = c;
+    b.setAttribute("aria-label", "Cor " + c);
+    b.addEventListener("click", () => { ed.cor = c; desenharEditor(); });
+    cores.insertBefore(b, $("edCorCustom"));
+  });
+  $("edCorCustom").value = ed.cor;
+  $("edCorCustom").classList.toggle("sel", !PALETA.includes(ed.cor));
+  // Arco-íris enquanto não há cor personalizada; depois mostra a cor escolhida.
+  $("edCorCustom").style.background = PALETA.includes(ed.cor) ? "" : ed.cor;
+
+  const f = $("edFreq");
+  f.replaceChildren();
+  FREQS.forEach(([valor, rotulo]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip-op" + (!ed.outro && ed.freq === valor ? " sel" : "");
+    b.textContent = rotulo;
+    b.addEventListener("click", () => { ed.freq = valor; ed.outro = false; desenharEditor(); });
+    f.append(b);
+  });
+  const outro = document.createElement("button");
+  outro.type = "button";
+  outro.className = "chip-op" + (ed.outro ? " sel" : "");
+  outro.textContent = "Outro";
+  outro.addEventListener("click", () => { ed.outro = true; desenharEditor(); $("edFreqDias").focus(); });
+  f.append(outro);
+  $("edFreqDias").hidden = !ed.outro;
+}
+
+function abrirEditor(t) {
+  ed.tarefa = t || null;
+  ed.cor = t ? t.cor : PALETA[5];
+  ed.freq = t ? t.frequencia_dias : null;
+  ed.outro = !!t && t.frequencia_dias != null && !FREQS.some(([v]) => v === t.frequencia_dias);
+  $("editorTitulo").textContent = t ? "Editar tarefa" : "Nova tarefa";
+  $("edNome").value = t ? t.nome : "";
+  $("edFreqDias").value = ed.outro ? t.frequencia_dias : "";
+  $("edExtra").hidden = !t;
+  if (t) $("edArquivar").textContent = t.arquivada ? "Restaurar" : "Arquivar";
+  erroEditor("");
+  desenharEditor();
+  $("editor").showModal();
+  if (t) $("edNome").blur(); // ao editar, não abre o teclado sozinho
+}
+
+$("btn-nova").addEventListener("click", () => abrirEditor(null));
+$("edCancelar").addEventListener("click", () => $("editor").close());
+$("editor").addEventListener("click", (e) => { if (e.target === $("editor")) $("editor").close(); });
+$("edCorCustom").addEventListener("input", (e) => { ed.cor = e.target.value; desenharEditor(); });
+
+$("editorForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nome = $("edNome").value.trim();
+  if (!nome) return;
+  let freq = ed.freq;
+  if (ed.outro) {
+    freq = parseInt($("edFreqDias").value, 10);
+    if (!(freq >= 1 && freq <= 365)) return erroEditor("Frequência: use um número de 1 a 365 dias.");
+  }
+  const campos = { nome, cor: ed.cor, frequencia_dias: freq };
+  $("edSalvar").disabled = true;
+  const { error } = ed.tarefa
+    ? await sb.from("tarefas").update(campos).eq("id", ed.tarefa.id)
+    : await sb.from("tarefas").insert(campos);
+  $("edSalvar").disabled = false;
+  if (error) return erroEditor("Erro ao salvar: " + error.message);
+  $("editor").close();
+  carregar();
 });
 
-$("addForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const nome = $("novoNome").value.trim();
-  if (!nome) return;
-  const bruto = $("novaFreq").value === "custom" ? $("novaFreqDias").value : $("novaFreq").value;
-  const frequencia_dias = bruto === "" ? null : parseInt(bruto, 10);
-  if (frequencia_dias !== null && !(frequencia_dias >= 1 && frequencia_dias <= 365)) return msg("Frequência: use um número de 1 a 365 dias.", "err");
-  const { error } = await sb.from("tarefas").insert({ nome, cor: $("novaCor").value, frequencia_dias });
-  if (error) return msg("Erro ao criar: " + error.message + (/frequencia_dias/.test(error.message) ? " (rode o migracao-frequencia.sql no Supabase)" : ""), "err");
-  $("novoNome").value = "";
-  $("novaFreq").value = "";
-  $("novaFreqDias").value = "";
-  $("novaFreqDias").hidden = true;
-  msg("Tarefa criada.", "ok");
-  carregar();
+$("edArquivar").addEventListener("click", () => {
+  const t = ed.tarefa;
+  $("editor").close();
+  atualizar(t, { arquivada: !t.arquivada });
+});
+
+$("edApagar").addEventListener("click", () => {
+  const t = ed.tarefa;
+  $("editor").close();
+  apagar(t); // pede confirmação antes de apagar
 });
 
 $("authForm").addEventListener("submit", async (e) => {
