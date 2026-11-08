@@ -50,6 +50,9 @@
   /* tela principal: duas metades */
   .metades { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
   @media (max-width:560px) { .metades { grid-template-columns:1fr; } }
+  #banner-dia { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 14px; margin-bottom:16px; border:1px solid var(--accent); border-radius:10px; background:var(--card); }
+  #banner-dia span { font-weight:600; }
+  #banner-dia span::first-letter { text-transform:uppercase; }
 
   /* calendário */
   .cal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
@@ -58,7 +61,7 @@
   .semana, .grade { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:4px; }
   .semana span { text-align:center; color:var(--muted); font-size:.8rem; padding-bottom:4px; }
   .cel { min-width:0; min-height:64px; padding:6px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); font:inherit; display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; cursor:default; }
-  .cel.tem { cursor:pointer; }
+  .cel.editavel { cursor:pointer; }
   .cel.hoje { outline:2px solid var(--accent); outline-offset:-1px; }
   .cel.futuro { opacity:.45; }
   .cel .n { font-size:.85rem; color:var(--muted); }
@@ -151,13 +154,17 @@
     </nav>
 
     <!-- HOJE: metade esquerda = a fazer, metade direita = feitas hoje -->
+    <div id="banner-dia" hidden>
+      <span id="banner-texto"></span>
+      <button type="button" class="ghost" id="voltar-hoje">Voltar para hoje</button>
+    </div>
     <div id="aba-hoje" class="metades">
       <div>
         <h2>A fazer <span id="qtd-fazer"></span></h2>
         <div class="card"><ul id="lista-fazer"></ul></div>
       </div>
       <div>
-        <h2>Feitas hoje <span class="qtd" id="qtd-feitas"></span></h2>
+        <h2><span id="titulo-feitas">Feitas hoje</span> <span class="qtd" id="qtd-feitas"></span></h2>
         <div class="card"><ul id="lista-feitas"></ul></div>
       </div>
     </div>
@@ -238,7 +245,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { lock: (_nome, _espera, fn) => fn() },
 });
 
-const VERSAO = "2026-11-01.4";
+const VERSAO = "2026-11-08.1";
 const $ = (id) => document.getElementById(id);
 $("versao").textContent = "Versão " + VERSAO;
 const msg = (text, kind = "") => { $("msg").textContent = text; $("msg").className = kind; };
@@ -276,9 +283,11 @@ function situacao(t) {
 }
 
 const agora = new Date();
-const state = { tarefas: [], real: [], aba: "hoje", ano: agora.getFullYear(), mes: agora.getMonth() };
+const state = { tarefas: [], real: [], aba: "hoje", dia: null, ano: agora.getFullYear(), mes: agora.getMonth() };
 
 const feitaNoDia = (tarefaId, dia) => state.real.some((r) => r.tarefa_id === tarefaId && r.dia === dia);
+// Dia que a tela "Hoje" está mostrando: hoje, ou um dia passado escolhido no calendário.
+const diaAtual = () => state.dia || hojeChave();
 const ativas = () => state.tarefas.filter((t) => !t.arquivada);
 
 function bolinha(cor) {
@@ -318,7 +327,7 @@ function itemDia(t, feito) {
   principal.setAttribute("aria-label", (feito ? "Desfazer: " : "Marcar como feita: ") + t.nome);
   principal.addEventListener("click", () => marcar(t, !feito));
   li.append(principal);
-  const s = feito ? null : situacao(t);
+  const s = feito || state.dia ? null : situacao(t);
   if (s) {
     const b = document.createElement("button");
     b.type = "button";
@@ -336,7 +345,11 @@ function itemDia(t, feito) {
 }
 
 function desenharHoje() {
-  const hoje = hojeChave();
+  const hoje = diaAtual();
+  const passado = !!state.dia;
+  $("banner-dia").hidden = !passado || state.aba !== "hoje";
+  $("banner-texto").textContent = passado ? "Editando " + rotuloDia(hoje) : "";
+  $("titulo-feitas").textContent = passado ? "Feitas nesse dia" : "Feitas hoje";
   const as = ativas();
   // Tarefas com aviso de atraso vêm primeiro.
   const fazer = as.filter((t) => !feitaNoDia(t.id, hoje)).sort((a, b) => (situacao(b) ? 1 : 0) - (situacao(a) ? 1 : 0));
@@ -345,12 +358,12 @@ function desenharHoje() {
   const lf = $("lista-fazer");
   lf.replaceChildren();
   if (!as.length) lf.append(vazio("Nenhuma tarefa cadastrada. Crie a primeira na aba Tarefas."));
-  else if (!fazer.length) lf.append(vazio("Tudo feito por hoje."));
+  else if (!fazer.length) lf.append(vazio(passado ? "Tudo feito nesse dia." : "Tudo feito por hoje."));
   fazer.forEach((t) => lf.append(itemDia(t, false)));
 
   const ld = $("lista-feitas");
   ld.replaceChildren();
-  if (!feitas.length) ld.append(vazio("Nada feito ainda hoje."));
+  if (!feitas.length) ld.append(vazio(passado ? "Nada feito nesse dia." : "Nada feito ainda hoje."));
   feitas.forEach((t) => ld.append(itemDia(t, true)));
 
   $("qtd-fazer").textContent = "(" + fazer.length + ")";
@@ -439,7 +452,7 @@ function desenharCalendario() {
     const lista = mapa.get(chave) || [];
     const cel = document.createElement("button");
     cel.type = "button";
-    cel.className = "cel" + (chave === hoje ? " hoje" : "") + (chave > hoje ? " futuro" : "") + (lista.length ? " tem" : "");
+    cel.className = "cel" + (chave === hoje ? " hoje" : "") + (chave > hoje ? " futuro" : "") + (lista.length ? " tem" : "") + (chave <= hoje ? " editavel" : "");
     const n = document.createElement("span");
     n.className = "n";
     n.textContent = d;
@@ -454,8 +467,9 @@ function desenharCalendario() {
       cel.addEventListener("focus", () => mostrarTip(cel, chave, lista));
       cel.addEventListener("mouseleave", esconderTip);
       cel.addEventListener("blur", esconderTip);
-      cel.addEventListener("click", () => mostrarTip(cel, chave, lista));
     }
+    // Tocar num dia (hoje ou passado) abre a tela principal naquele dia, para marcar ou desmarcar.
+    if (chave <= hoje) cel.addEventListener("click", () => abrirDia(chave));
     grade.append(cel);
   }
 }
@@ -525,7 +539,7 @@ async function carregar() {
 }
 
 async function marcar(t, feito) {
-  const dia = hojeChave();
+  const dia = diaAtual();
   const { error } = feito
     ? await sb.from("realizacoes").insert({ tarefa_id: t.id, dia })
     : await sb.from("realizacoes").delete().eq("tarefa_id", t.id).eq("dia", dia);
@@ -546,9 +560,20 @@ async function apagar(t) {
   carregar();
 }
 
+function abrirDia(chave) {
+  state.dia = chave === hojeChave() ? null : chave;
+  state.aba = "hoje";
+  esconderTip();
+  desenhar();
+  window.scrollTo(0, 0);
+}
+$("voltar-hoje").addEventListener("click", () => abrirDia(hojeChave()));
+
 $("abas").addEventListener("click", (e) => {
   const a = e.target.closest("button")?.dataset.aba;
-  if (a) { state.aba = a; esconderTip(); desenhar(); }
+  if (!a) return;
+  if (a === "hoje") state.dia = null; // a aba "Hoje" sempre mostra hoje
+  state.aba = a; esconderTip(); desenhar();
 });
 
 function mudarMes(delta) {
