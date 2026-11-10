@@ -160,12 +160,12 @@
     </div>
     <div id="aba-hoje" class="metades">
       <div>
-        <h2>A fazer <span id="qtd-fazer"></span></h2>
-        <div class="card"><ul id="lista-fazer"></ul></div>
-      </div>
-      <div>
         <h2><span id="titulo-feitas">Feitas hoje</span> <span class="qtd" id="qtd-feitas"></span></h2>
         <div class="card"><ul id="lista-feitas"></ul></div>
+      </div>
+      <div>
+        <h2>A fazer <span id="qtd-fazer"></span></h2>
+        <div class="card"><ul id="lista-fazer"></ul></div>
       </div>
     </div>
 
@@ -245,7 +245,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { lock: (_nome, _espera, fn) => fn() },
 });
 
-const VERSAO = "2026-11-08.1";
+const VERSAO = "2026-11-10.1";
 const $ = (id) => document.getElementById(id);
 $("versao").textContent = "Versão " + VERSAO;
 const msg = (text, kind = "") => { $("msg").textContent = text; $("msg").className = kind; };
