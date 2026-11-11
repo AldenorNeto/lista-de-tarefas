@@ -1,6 +1,6 @@
 // Service worker: guarda a "casca" do app para abrir rápido e instalar no celular.
 // Os dados (Supabase) nunca são guardados aqui: vão sempre direto para a rede.
-const CACHE = "tarefas-v5";
+const CACHE = "tarefas-v4";
 const CASCA = ["./", "index.html", "manifest.json", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
