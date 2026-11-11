@@ -245,7 +245,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { lock: (_nome, _espera, fn) => fn() },
 });
 
-const VERSAO = "2026-11-10.1";
+const VERSAO = "2026-11-10.3";
 const $ = (id) => document.getElementById(id);
 $("versao").textContent = "Versão " + VERSAO;
 const msg = (text, kind = "") => { $("msg").textContent = text; $("msg").className = kind; };
