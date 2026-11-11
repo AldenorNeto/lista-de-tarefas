@@ -110,6 +110,7 @@
   li.item-dia:last-child { margin-bottom:0; }
   li.item-dia:active { filter:brightness(.92); }
   .item-dia .principal { flex:1; min-width:0; text-align:left; background:transparent; color:inherit; padding:14px; border-radius:10px; font:inherit; font-weight:600; word-break:break-word; }
+  .item-dia .faltam { display:flex; align-items:center; padding:0 14px; font-size:.8rem; font-weight:600; opacity:.8; white-space:nowrap; }
   button.aviso-btn { display:flex; background:transparent; color:inherit; padding:12px 14px; }
   button.aviso-btn svg { width:20px; height:20px; }
   .freq { color:var(--muted); font-size:.85rem; }
@@ -160,11 +161,11 @@
     </div>
     <div id="aba-hoje" class="metades">
       <div>
-        <h2><span id="titulo-feitas">Feitas hoje</span> <span class="qtd" id="qtd-feitas"></span></h2>
+        <h2><span id="titulo-feitas">Feitas hoje</span></h2>
         <div class="card"><ul id="lista-feitas"></ul></div>
       </div>
       <div>
-        <h2>A fazer <span id="qtd-fazer"></span></h2>
+        <h2>A fazer</h2>
         <div class="card"><ul id="lista-fazer"></ul></div>
       </div>
     </div>
@@ -245,7 +246,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { lock: (_nome, _espera, fn) => fn() },
 });
 
-const VERSAO = "2026-11-10.3";
+const VERSAO = "2026-11-10.4";
 const $ = (id) => document.getElementById(id);
 $("versao").textContent = "Versão " + VERSAO;
 const msg = (text, kind = "") => { $("msg").textContent = text; $("msg").className = kind; };
@@ -280,6 +281,15 @@ function situacao(t) {
   const dias = diffDias(base, hojeChave());
   if (dias < t.frequencia_dias) return null;
   return { dias, ultima, atraso: dias - t.frequencia_dias };
+}
+
+// Dias que faltam para a tarefa "vencer" (só para quem tem frequência e ainda não venceu).
+function diasRestantes(t) {
+  if (!t.frequencia_dias) return null;
+  const feitas = state.real.filter((r) => r.tarefa_id === t.id).map((r) => r.dia).sort();
+  const base = feitas.length ? feitas[feitas.length - 1] : new Date(t.criada_em).toLocaleDateString("sv-SE");
+  const faltam = t.frequencia_dias - diffDias(base, hojeChave());
+  return faltam > 0 ? faltam : null;
 }
 
 const agora = new Date();
@@ -328,6 +338,14 @@ function itemDia(t, feito) {
   principal.addEventListener("click", () => marcar(t, !feito));
   li.append(principal);
   const s = feito || state.dia ? null : situacao(t);
+  const faltam = feito || state.dia || s ? null : diasRestantes(t);
+  if (faltam) {
+    const f = document.createElement("span");
+    f.className = "faltam";
+    f.textContent = faltam === 1 ? "amanhã" : "em " + faltam + " dias";
+    f.title = "Próxima vez em " + plural(faltam, "dia") + " (" + freqLabel(t.frequencia_dias) + ")";
+    li.append(f);
+  }
   if (s) {
     const b = document.createElement("button");
     b.type = "button";
@@ -366,8 +384,6 @@ function desenharHoje() {
   if (!feitas.length) ld.append(vazio(passado ? "Nada feito nesse dia." : "Nada feito ainda hoje."));
   feitas.forEach((t) => ld.append(itemDia(t, true)));
 
-  $("qtd-fazer").textContent = "(" + fazer.length + ")";
-  $("qtd-feitas").textContent = "(" + feitas.length + ")";
 }
 
 // ---- calendário ----
